@@ -19,11 +19,13 @@
   syncThemeIcon();
   themeButton.addEventListener('click', () => { document.body.classList.toggle('dark'); localStorage.setItem('ecotech-theme', document.body.classList.contains('dark') ? 'dark' : 'light'); syncThemeIcon(); });
 
-  // User role, including arrow-key navigation
+  // User role, including arrow-key navigation. The backend can later set this from the authenticated user session.
+  let selectedRole = $('.role.active').dataset.role;
   $$('.role').forEach((role, index, roles) => {
     role.addEventListener('click', () => {
       roles.forEach(item => { item.classList.remove('active'); item.setAttribute('aria-checked', 'false'); });
       role.classList.add('active'); role.setAttribute('aria-checked', 'true');
+      selectedRole = role.dataset.role;
       showToast('info', `${role.dataset.role} portal selected`, 'Your sign-in will open the correct workspace.');
     });
     role.addEventListener('keydown', event => { if (['ArrowLeft', 'ArrowRight'].includes(event.key)) { event.preventDefault(); roles[(index + (event.key === 'ArrowRight' ? 1 : roles.length - 1)) % roles.length].focus(); } });
@@ -49,7 +51,27 @@
     event.preventDefault(); const form = event.currentTarget;
     if (!form.checkValidity()) { form.classList.add('was-validated'); showToast('error', 'Check your details', 'Please correct the highlighted fields.'); return; }
     const button = $('button[type="submit"]', form); button.disabled = true; button.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i><span>Signing you in…</span>';
-    setTimeout(() => { button.disabled = false; button.innerHTML = '<span>Sign in securely</span><i class="fa-solid fa-arrow-right"></i>'; showToast('success', 'Demo sign-in successful', 'Welcome to the EcoTech Smart City platform.'); }, 1200);
+    (async () => {
+      try {
+        const response = await fetch('http://localhost:5000/api/auth/login', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: $('#email').value.trim(), password: $('#password').value, role: selectedRole })
+        });
+        const result = await response.json();
+        if (!response.ok) throw new Error(result.message || 'Unable to sign in');
+        localStorage.setItem('ecotech-token', result.token);
+        localStorage.setItem('ecotech-user', JSON.stringify(result.user));
+        const destinations = { admin: 'admin-dashboard/index.html', driver: 'driver-dashboard/index.html' };
+        const destination = destinations[String(result.user.role).toLowerCase()];
+        if (!destination) throw new Error('Citizen dashboard is not configured yet.');
+        showToast('success', 'Sign-in successful', `Opening your ${result.user.role} workspace...`);
+        setTimeout(() => { window.location.href = destination; }, 500);
+      } catch (error) {
+        showToast('error', 'Sign-in failed', error.message);
+      } finally {
+        button.disabled = false; button.innerHTML = '<span>Sign in securely</span><i class="fa-solid fa-arrow-right"></i>';
+      }
+    })();
   });
 
   // Demo OTP flow
@@ -68,7 +90,13 @@
   $('#verify-otp').addEventListener('click', () => {
     const entered = otpInputs.map(input => input.value).join('');
     if (entered.length !== 6) { showToast('error', 'OTP incomplete', 'Enter all six digits to continue.'); return; }
-    if (entered === generatedOtp) { showToast('success', 'Phone verified', 'Your demo sign-in was successful.'); otpInputs.forEach(input => input.value = ''); } else showToast('error', 'Incorrect OTP', 'The code does not match the generated demo OTP.');
+    if (entered === generatedOtp) {
+      if (selectedRole === 'Admin') {
+        showToast('success', 'Admin verified', 'Opening the EcoSmart Ballari admin dashboard...');
+        setTimeout(() => { window.location.href = 'admin-dashboard/index.html'; }, 700);
+      } else showToast('success', 'Phone verified', 'Your demo sign-in was successful.');
+      otpInputs.forEach(input => input.value = '');
+    } else showToast('error', 'Incorrect OTP', 'The code does not match the generated demo OTP.');
   });
   $('#google-login').addEventListener('click', () => showToast('info', 'Google sign-in', 'Google OAuth integration coming soon.'));
 

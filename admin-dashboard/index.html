@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="description" content="EcoSmart Ballari administration portal"><title>EcoSmart Ballari | Admin</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Poppins:wght@500;600;700&display=swap" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css" rel="stylesheet">
+  <link href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" rel="stylesheet">
+  <link rel="stylesheet" href="style.css"><link rel="stylesheet" href="responsive.css">
+</head>
+<body>
+  <div class="app-loader" id="appLoader"><div class="loader-logo"><i class="fa-solid fa-leaf"></i></div><p>Loading EcoSmart...</p></div>
+  <aside class="sidebar" id="sidebar">
+    <a class="brand" href="#dashboard"><span class="brand-icon"><i class="fa-solid fa-leaf"></i></span><span><b>EcoSmart</b><small>Ballari</small></span></a>
+    <nav class="side-nav" aria-label="Admin navigation">
+      <p>MAIN MENU</p>
+      <a class="active" href="#dashboard" data-page="dashboard"><i class="fa-solid fa-grid-2"></i>Dashboard</a>
+      <a href="#bins" data-page="bins"><i class="fa-solid fa-trash-can"></i>Garbage Bins</a>
+      <a href="#drivers" data-page="drivers"><i class="fa-solid fa-truck"></i>Drivers</a>
+      <a href="#citizens" data-page="citizens"><i class="fa-solid fa-users"></i>Citizens</a>
+      <a href="#requests" data-page="requests"><i class="fa-solid fa-clipboard-list"></i>Collection Requests <span class="nav-count">43</span></a>
+      <a href="#complaints" data-page="complaints"><i class="fa-regular fa-comment-dots"></i>Complaints <span class="nav-count danger">12</span></a>
+      <a href="#routes" data-page="routes"><i class="fa-solid fa-route"></i>Routes</a>
+      <a href="#tracking" data-page="tracking"><i class="fa-solid fa-location-crosshairs"></i>Live Tracking</a>
+      <a href="#notifications" data-page="notifications"><i class="fa-regular fa-bell"></i>Notifications</a>
+      <a href="#reports" data-page="reports"><i class="fa-solid fa-chart-pie"></i>Reports</a>
+      <a href="#settings" data-page="settings"><i class="fa-solid fa-gear"></i>Settings</a>
+    </nav>
+    <div class="sidebar-bottom"><a href="#settings" data-page="settings"><span class="avatar">A</span><span><b>Admin</b><small>System Administrator</small></span></a><button id="logoutBtn"><i class="fa-solid fa-arrow-right-from-bracket"></i>Logout</button></div>
+  </aside>
+  <main class="main-content">
+    <header class="topbar"><button class="icon-btn" id="sidebarToggle" aria-label="Toggle menu"><i class="fa-solid fa-bars-staggered"></i></button><div><h1 id="pageTitle">Admin Dashboard</h1><span class="top-date" id="currentDate"></span></div><div class="top-actions"><div class="search-wrap"><i class="fa-solid fa-magnifying-glass"></i><input id="globalSearch" placeholder="Search anything..."></div><button class="icon-btn theme-btn" id="themeToggle" aria-label="Switch color theme"><i class="fa-regular fa-moon"></i></button><div class="dropdown"><button class="icon-btn position-relative" data-bs-toggle="dropdown" aria-label="Notifications"><i class="fa-regular fa-bell"></i><span class="badge-dot">4</span></button><div class="dropdown-menu dropdown-menu-end notification-menu"><div class="menu-head"><b>Notifications</b><button class="btn-link" id="readAll">Mark all read</button></div><div id="notificationPreview"></div><a class="view-all" href="#notifications" data-page="notifications">View all notifications</a></div></div><div class="dropdown profile-menu"><button class="profile-trigger" data-bs-toggle="dropdown"><span class="avatar">A</span><span class="d-none d-md-inline"><b>Admin</b><small>System Administrator</small></span><i class="fa-solid fa-chevron-down"></i></button><ul class="dropdown-menu dropdown-menu-end"><li><a class="dropdown-item" href="#settings" data-page="settings"><i class="fa-regular fa-user"></i>My Profile</a></li><li><a class="dropdown-item" href="#settings" data-page="settings"><i class="fa-solid fa-gear"></i>Settings</a></li><li><a class="dropdown-item" href="#help" id="helpBtn"><i class="fa-regular fa-circle-question"></i>Help</a></li><li><hr class="dropdown-divider"></li><li><button class="dropdown-item text-danger" id="profileLogout"><i class="fa-solid fa-arrow-right-from-bracket"></i>Logout</button></li></ul></div></div></header>
+    <section id="pageContent"></section>
+  </main>
+  <div class="modal fade" id="recordModal" tabindex="-1"><div class="modal-dialog modal-dialog-centered"><div class="modal-content"><form id="recordForm"><div class="modal-header"><h5 class="modal-title" id="modalTitle">Add Record</h5><button class="btn-close" type="button" data-bs-dismiss="modal"></button></div><div class="modal-body" id="modalFields"></div><div class="modal-footer"><button class="btn btn-light" type="button" data-bs-dismiss="modal">Cancel</button><button class="btn btn-success" type="submit">Save Changes</button></div></form></div></div></div>
+  <div class="modal fade" id="confirmModal" tabindex="-1"><div class="modal-dialog modal-dialog-centered modal-sm"><div class="modal-content"><div class="modal-body text-center p-4"><span class="confirm-icon"><i class="fa-solid fa-arrow-right-from-bracket"></i></span><h5 id="confirmTitle" class="mt-3">Log out?</h5><p id="confirmText" class="text-muted small mb-4">You will need to sign in again to continue.</p><div class="d-flex gap-2"><button class="btn btn-light flex-grow-1" data-bs-dismiss="modal">Cancel</button><button class="btn btn-danger flex-grow-1" id="confirmAction">Logout</button></div></div></div></div></div>
+  <div class="toast-container position-fixed bottom-0 end-0 p-3" id="toastArea"></div>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script><script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script><script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script><script src="app.js"></script>
+</body></html>
