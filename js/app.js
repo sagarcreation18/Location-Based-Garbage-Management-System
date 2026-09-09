@@ -2,6 +2,14 @@
 (() => {
   const $ = (selector, root = document) => root.querySelector(selector);
   const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
+  const apiBase = () => {
+    const { protocol, hostname, port, origin } = location;
+    if (port === '5000') return `${origin}/api`;
+    if (hostname === 'localhost' || hostname === '127.0.0.1') return 'http://localhost:5000/api';
+    if (/^(192\.168\.|10\.|172\.(1[6-9]|2\d|3[0-1])\.)/.test(hostname)) return `${protocol}//${hostname}:5000/api`;
+    return `${origin}/api`;
+  };
+  const API = apiBase();
   const showToast = (type, title, message) => {
     const icons = { success: 'fa-circle-check', error: 'fa-circle-exclamation', info: 'fa-circle-info' };
     const toast = document.createElement('div');
@@ -53,7 +61,7 @@
     const button = $('button[type="submit"]', form); button.disabled = true; button.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i><span>Signing you in…</span>';
     (async () => {
       try {
-        const response = await fetch('http://localhost:5000/api/auth/login', {
+        const response = await fetch(API + '/auth/login', {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ email: $('#email').value.trim(), password: $('#password').value, role: selectedRole })
         });
@@ -80,7 +88,7 @@
     const phone = $('#phone'); const form = $('#phone-pane');
     if (!phone.checkValidity()) { form.classList.add('was-validated'); showToast('error', 'Enter a valid phone number', 'Use a 10-digit phone number to receive a demo OTP.'); return; }
     try {
-      const response = await fetch('http://localhost:5000/api/auth/send-otp', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ phone: phone.value }) });
+      const response = await fetch(API + '/auth/send-otp', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ phone: phone.value }) });
       const result = await response.json();
       if (!response.ok) throw new Error(result.message || 'Unable to send OTP');
       generatedOtp = result.demoOTP; $('#demo-otp').textContent = generatedOtp; $('#otp-area').hidden = false; $('#otp-1').focus(); showToast('info', 'Demo OTP generated', 'Use the displayed OTP to verify your phone.');
@@ -96,7 +104,7 @@
     const entered = otpInputs.map(input => input.value).join('');
     if (entered.length !== 6) { showToast('error', 'OTP incomplete', 'Enter all six digits to continue.'); return; }
     try {
-      const response = await fetch('http://localhost:5000/api/auth/verify-otp', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ phone: $('#phone').value, otp: entered, role: selectedRole }) });
+      const response = await fetch(API + '/auth/verify-otp', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ phone: $('#phone').value, otp: entered, role: selectedRole }) });
       const result = await response.json();
       if (!response.ok) throw new Error(result.message || 'OTP verification failed');
       localStorage.setItem('ecotech-token', result.token); localStorage.setItem('ecotech-user', JSON.stringify(result.user));
@@ -111,7 +119,7 @@
   });
   const finishGoogleLogin = async credential => {
     try {
-      const response = await fetch('http://localhost:5000/api/auth/google', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ credential, role: selectedRole }) });
+      const response = await fetch(API + '/auth/google', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ credential, role: selectedRole }) });
       const result = await response.json(); if (!response.ok) throw new Error(result.message || 'Google sign-in failed');
       localStorage.setItem('ecotech-token', result.token); localStorage.setItem('ecotech-user', JSON.stringify(result.user));
       const destination = ({ admin: 'admin-dashboard/index.html', driver: 'driver-dashboard/index.html', citizen: 'citizen-dashboard/index.html' })[String(result.user.role).toLowerCase()];
