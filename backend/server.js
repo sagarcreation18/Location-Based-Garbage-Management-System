@@ -67,14 +67,12 @@ app.use("/app", express.static(path.join(__dirname, ".."), { index: "index.html"
 // Test Route
 // ========================================
 
+app.get("/health", (req, res) => {
+    res.json({ success: true, message: "EcoSmart service is healthy", version: "1.0.0" });
+});
+
 app.get("/", (req, res) => {
-
-    res.json({
-        success: true,
-        message: "EcoTech Smart City Backend API is running 🚛🌱",
-        version: "1.0.0"
-    });
-
+    res.redirect("/app/index.html");
 });
 
 
