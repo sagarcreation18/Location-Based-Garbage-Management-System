@@ -16,7 +16,7 @@
   }
 
   async function fetchRatings() {
-    const token = localStorage.getItem("token") || "";
+    const token = localStorage.getItem("ecotech-token") || "";
     const response = await fetch(API + "/admin/ratings", { headers: { Authorization: "Bearer " + token } });
     const contentType = response.headers.get("content-type") || "";
     if (!contentType.includes("application/json")) throw new Error("API server was not found. Start the backend on port 5000.");
