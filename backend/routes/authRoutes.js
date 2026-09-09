@@ -5,6 +5,7 @@ const {
     login,
     sendOTP,
     verifyOTP,
+    googleLogin,
     getMe
 } = require("../controllers/authController");
 
@@ -25,6 +26,7 @@ router.post("/login", login);
 router.post("/send-otp", sendOTP);
 
 router.post("/verify-otp", verifyOTP);
+router.post("/google", googleLogin);
 
 
 // Current logged-in user

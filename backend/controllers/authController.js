@@ -45,9 +45,9 @@ exports.register = async (req, res) => {
         }
 
         // Validate role
-        const allowedRoles = ["Citizen", "Driver"];
+        const allowedRoles = ["citizen", "driver"];
 
-        const selectedRole = role || "Citizen";
+        const selectedRole = String(role || "citizen").toLowerCase();
 
         if (!allowedRoles.includes(selectedRole)) {
             return res.status(400).json({
@@ -104,8 +104,8 @@ exports.register = async (req, res) => {
         // Insert user
         const [result] = await pool.execute(
             `INSERT INTO users
-            (full_name, email, phone, password, role)
-            VALUES (?, ?, ?, ?, ?)`,
+            (full_name, email, phone, password_hash, role, is_verified, is_active)
+            VALUES (?, ?, ?, ?, ?, TRUE, TRUE)`,
             [
                 full_name,
                 email,
@@ -115,9 +115,17 @@ exports.register = async (req, res) => {
             ]
         );
 
+        // A newly registered Driver needs a driver profile before accessing the Driver portal.
+        if (selectedRole === "driver") {
+            await pool.execute(
+                "INSERT INTO drivers (user_id, driver_status) VALUES (?, 'Available')",
+                [result.insertId]
+            );
+        }
+
         // Find created user
         const [users] = await pool.execute(
-            `SELECT id, full_name, email, phone, role, status, created_at
+            `SELECT id, full_name, email, phone, role, IF(is_active = 1, 'Active', 'Inactive') AS status, created_at
              FROM users
              WHERE id = ?`,
             [result.insertId]
@@ -265,7 +273,7 @@ exports.sendOTP = async (req, res) => {
 
         // Check if user exists
         const [users] = await pool.execute(
-            `SELECT id, full_name, email, phone, role, status
+            `SELECT id, full_name, email, phone, role, IF(is_active = 1, 'Active', 'Inactive') AS status
              FROM users
              WHERE phone = ?`,
             [phone]
@@ -298,7 +306,7 @@ exports.sendOTP = async (req, res) => {
         // Save OTP
         await pool.execute(
             `INSERT INTO otp_codes
-             (phone, otp, expires_at)
+             (phone, otp_code, expires_at)
              VALUES (?, ?, ?)`,
             [
                 phone,
@@ -357,8 +365,8 @@ exports.verifyOTP = async (req, res) => {
             `SELECT *
              FROM otp_codes
              WHERE phone = ?
-             AND otp = ?
-             AND verified = FALSE
+             AND otp_code = ?
+             AND is_used = FALSE
              ORDER BY id DESC
              LIMIT 1`,
             [phone, otp]
@@ -384,7 +392,7 @@ exports.verifyOTP = async (req, res) => {
 
         // Find user
         const [users] = await pool.execute(
-            `SELECT id, full_name, email, phone, role, status, created_at
+            `SELECT id, full_name, email, phone, role, IF(is_active = 1, 'Active', 'Inactive') AS status, created_at
              FROM users
              WHERE phone = ?`,
             [phone]
@@ -400,7 +408,7 @@ exports.verifyOTP = async (req, res) => {
         const user = users[0];
 
         // Check role
-        if (role && user.role !== role) {
+        if (role && String(user.role).toLowerCase() !== String(role).toLowerCase()) {
             return res.status(403).json({
                 success: false,
                 message: "Selected role does not match this account"
@@ -417,7 +425,7 @@ exports.verifyOTP = async (req, res) => {
         // Mark OTP as verified
         await pool.execute(
             `UPDATE otp_codes
-             SET verified = TRUE
+             SET is_used = TRUE
              WHERE id = ?`,
             [otpRecord.id]
         );
@@ -452,7 +460,7 @@ exports.getMe = async (req, res) => {
     try {
 
         const [users] = await pool.execute(
-            `SELECT id, full_name, email, phone, role, status, created_at
+            `SELECT id, full_name, email, phone, role, IF(is_active = 1, 'Active', 'Inactive') AS status, created_at
              FROM users
              WHERE id = ?`,
             [req.user.id]
@@ -478,5 +486,38 @@ exports.getMe = async (req, res) => {
             success: false,
             message: "Server error"
         });
+    }
+};
+
+// ========================================
+// GOOGLE ID TOKEN LOGIN
+// ========================================
+exports.googleLogin = async (req, res) => {
+    try {
+        const { credential, role } = req.body;
+        if (!credential) return res.status(400).json({ success: false, message: "Google credential is required" });
+        if (!process.env.GOOGLE_OAUTH_CLIENT_ID) return res.status(503).json({ success: false, message: "Google sign-in is not configured on the server" });
+        const googleResponse = await fetch(`https://oauth2.googleapis.com/tokeninfo?id_token=${encodeURIComponent(credential)}`);
+        if (!googleResponse.ok) return res.status(401).json({ success: false, message: "Invalid Google sign-in token" });
+        const googleUser = await googleResponse.json();
+        if (googleUser.aud !== process.env.GOOGLE_OAUTH_CLIENT_ID || googleUser.email_verified !== "true") return res.status(401).json({ success: false, message: "Google token could not be verified" });
+        const [users] = await pool.execute("SELECT id, full_name, email, phone, role, is_active FROM users WHERE email=?", [googleUser.email]);
+        let user = users[0];
+        if (!user) {
+            if (role && String(role).toLowerCase() !== "citizen") return res.status(403).json({ success: false, message: "New Admin and Driver accounts must be created by an administrator" });
+            const generatedPassword = await bcrypt.hash(require("crypto").randomBytes(32).toString("hex"), 10);
+            const [created] = await pool.execute(`INSERT INTO users (full_name,email,phone,password_hash,role,is_verified,is_active,google_id) VALUES (?, ?, ?, ?, 'citizen', TRUE, TRUE, ?)`, [String(googleUser.name || "Citizen").slice(0,100), googleUser.email, `g${Date.now()}`.slice(0,15), generatedPassword, googleUser.sub]);
+            const [createdUsers] = await pool.execute("SELECT id, full_name, email, phone, role, is_active FROM users WHERE id=?", [created.insertId]);
+            user = createdUsers[0];
+        } else {
+            if (!user.is_active) return res.status(403).json({ success: false, message: "Your account is inactive" });
+            if (role && String(user.role).toLowerCase() !== String(role).toLowerCase()) return res.status(403).json({ success: false, message: "Selected role does not match this account" });
+            await pool.execute("UPDATE users SET google_id=?, last_login=NOW() WHERE id=?", [googleUser.sub, user.id]);
+        }
+        const safeUser = { id: user.id, full_name: user.full_name, email: user.email, phone: user.phone, role: user.role, status: user.is_active ? "Active" : "Inactive" };
+        res.json({ success: true, message: "Google sign-in successful", token: generateToken(safeUser), user: safeUser });
+    } catch (error) {
+        console.error("Google login error:", error.message);
+        res.status(500).json({ success: false, message: "Unable to complete Google sign-in" });
     }
 };

@@ -1,0 +1,21 @@
+const pool = require("../config/db");
+const fail = (res, error, message) => { console.error(message, error.message); res.status(500).json({ success: false, message }); };
+
+exports.hotspots = async (req, res) => {
+  try {
+    const festival = String(req.query.context || "tomorrow") === "festival";
+    const [[complaints], [collections], [bins]] = await Promise.all([
+      pool.execute("SELECT location,COUNT(*) total,SUM(created_at>=DATE_SUB(NOW(),INTERVAL 7 DAY)) recent FROM complaints WHERE location IS NOT NULL AND location<>'' AND created_at>=DATE_SUB(NOW(),INTERVAL 30 DAY) GROUP BY location"),
+      pool.execute("SELECT gb.location,COUNT(*) total FROM collection_history ch JOIN garbage_bins gb ON gb.id=ch.bin_id WHERE ch.status='Completed' AND ch.collected_at>=DATE_SUB(NOW(),INTERVAL 30 DAY) GROUP BY gb.location"),
+      pool.execute("SELECT location,COUNT(*) bins,MAX(current_level) fill_level,SUM(status='Full') full_bins FROM garbage_bins WHERE location IS NOT NULL AND location<>'' GROUP BY location")
+    ]);
+    const key = value => String(value || "").trim().toLowerCase(), areas = new Map();
+    for (const row of bins) areas.set(key(row.location), { area: row.location, bins: Number(row.bins || 0), peakLevel: Number(row.fill_level || 0), fullBins: Number(row.full_bins || 0), complaints: 0, recentComplaints: 0, collections: 0 });
+    for (const row of complaints) { const item = areas.get(key(row.location)) || { area: row.location, bins: 0, peakLevel: 0, fullBins: 0, complaints: 0, recentComplaints: 0, collections: 0 }; item.complaints = Number(row.total || 0); item.recentComplaints = Number(row.recent || 0); areas.set(key(row.location), item); }
+    for (const row of collections) { const item = areas.get(key(row.location)) || { area: row.location, bins: 0, peakLevel: 0, fullBins: 0, complaints: 0, recentComplaints: 0, collections: 0 }; item.collections = Number(row.total || 0); areas.set(key(row.location), item); }
+    const hotspots = [...areas.values()].map(item => { const score = Math.min(100, Math.round((item.complaints * 4 + item.recentComplaints * 3 + item.collections * 1.5 + item.fullBins * 8 + item.peakLevel / 12) * (festival ? 1.35 : 1))); const risk = score >= 60 ? "Critical" : score >= 35 ? "High" : score >= 18 ? "Medium" : "Low"; return { ...item, score, risk, forecast: risk + " likelihood of excess waste " + (festival ? "during the festival period." : "tomorrow.") }; }).filter(item => item.score > 0).sort((a,b) => b.score - a.score).slice(0,20);
+    res.json({ success: true, data: { context: festival ? "festival" : "tomorrow", methodology: "Recent complaints, completed collections, current bin levels and full-bin count are combined into a transparent risk score.", hotspots } });
+  } catch (error) { fail(res, error, "Unable to calculate hotspot prediction"); }
+};
+exports.proofs = async (req, res) => { try { const [rows] = await pool.execute("SELECT ch.id,ch.waste_collected,ch.collected_at,ch.before_image_path,ch.after_image_path,ch.verification_status,ch.verification_note,gb.bin_code,gb.location,u.full_name driver_name,d.vehicle_number FROM collection_history ch JOIN garbage_bins gb ON gb.id=ch.bin_id JOIN drivers d ON d.id=ch.driver_id JOIN users u ON u.id=d.user_id WHERE ch.status='Completed' AND ch.before_image_path IS NOT NULL AND ch.after_image_path IS NOT NULL AND ch.verification_status='Pending' ORDER BY ch.collected_at DESC LIMIT 100"); res.json({ success: true, data: rows }); } catch (error) { fail(res, error, "Unable to load collection proofs"); } };
+exports.review = async (req, res) => { try { const status = String(req.body.status || ""), note = String(req.body.note || "").trim(); if (!["Verified","Rejected"].includes(status)) return res.status(400).json({ success: false, message: "Choose Verified or Rejected" }); const [result] = await pool.execute("UPDATE collection_history SET verification_status=?,verification_note=? WHERE id=?", [status, note.slice(0,500) || null, req.params.id]); if (!result.affectedRows) return res.status(404).json({ success: false, message: "Collection proof not found" }); res.json({ success: true, message: "Collection proof " + status.toLowerCase() }); } catch (error) { fail(res, error, "Unable to review proof"); } };

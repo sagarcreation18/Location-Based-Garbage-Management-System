@@ -1,0 +1,13 @@
+# Local secrets and developer-specific API configuration
+backend/.env
+backend/.env.*
+!backend/.env.example
+maps-config.js
+
+# Runtime files
+backend/node_modules/
+backend/uploads/
+backend/*.log
+
+# Editor-specific settings
+.vscode/

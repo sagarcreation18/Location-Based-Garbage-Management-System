@@ -1,0 +1,19 @@
+.login-card{animation:loginCardEnter .7s cubic-bezier(.16,1,.3,1) both}
+.field{position:relative;transition:transform .2s ease}
+.field.is-focused{transform:translateX(3px)}
+.field.is-focused>i{color:#16a34a;transform:scale(1.12)}
+.field>i{transition:color .2s ease,transform .2s ease}
+.field::after{content:"";position:absolute;left:0;bottom:-2px;width:0;height:2px;border-radius:4px;background:linear-gradient(90deg,#16a34a,#22c55e);transition:width .28s ease}
+.field.is-focused::after{width:100%}
+.field.is-complete .form-control{border-color:#22c55e;background:#f4fff7}
+.field.is-complete::before{content:"✓";position:absolute;z-index:5;right:13px;top:16px;width:17px;height:17px;border-radius:50%;display:grid;place-items:center;background:#16a34a;color:#fff;font-size:10px;font-weight:800;animation:checkPop .25s ease both}
+.field:has(.password-toggle)::before{right:48px}
+.login-form.login-submitting{pointer-events:none;filter:saturate(.92)}
+.login-form.login-submitting .primary-btn{animation:submitPulse 1s ease-in-out infinite}
+.primary-btn:disabled{cursor:wait;opacity:.92}
+.role{transition:transform .24s ease,box-shadow .24s ease,background .24s ease}
+.role.active{animation:roleSelect .32s ease both}
+@keyframes loginCardEnter{from{opacity:0;transform:translateY(22px) scale(.98)}to{opacity:1;transform:none}}
+@keyframes checkPop{from{opacity:0;transform:scale(.4)}to{opacity:1;transform:scale(1)}}
+@keyframes submitPulse{50%{box-shadow:0 0 0 7px rgba(34,197,94,.12),0 12px 24px rgba(22,163,74,.28)}}
+@keyframes roleSelect{50%{transform:translateY(-2px) scale(1.02)}}

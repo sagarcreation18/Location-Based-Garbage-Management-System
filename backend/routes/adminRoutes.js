@@ -1,0 +1,12 @@
+const express=require("express"); const auth=require("../middleware/authMiddleware"); const requireAdmin=require("../middleware/requireAdmin"); const a=require("../controllers/adminController"); const deletes=require("../controllers/adminDeleteController"); const proof=require("../controllers/aiAdminController"); const ratings=require("../controllers/ratingController"); const fuel=require("../controllers/fuelController"); const archive=require("../controllers/archiveController"); const r=express.Router();
+const audit=require("../middleware/audit"); r.use(auth,requireAdmin,audit("admin"));
+r.get("/dashboard",a.dashboard);
+r.route("/bins").get(archive.listBins).post(a.createBin); r.route("/bins/:id").put(a.updateBin).delete(archive.archiveBin);
+r.put("/bins/:id/assign",a.assignBin);
+r.route("/drivers").get(archive.listDrivers).post(a.createDriver); r.route("/drivers/:id").put(a.updateDriver).delete(archive.archiveDriver);
+r.route("/routes").get(a.listRoutes).post(a.createRoute); r.route("/routes/:id").put(a.updateRoute).delete(a.deleteRoute);
+r.get("/citizens",a.listCitizens); r.put("/citizens/:id/status",a.setCitizenActive); r.delete("/citizens/:id",a.deleteCitizen);
+r.get("/requests",a.listRequests); r.put("/requests/:id",a.updateRequest); r.delete("/requests/:id",deletes.deleteRequest);
+r.route("/complaints").get(a.listComplaints); r.route("/complaints/:id").put(a.updateComplaint).delete(a.deleteComplaint);
+r.post("/notifications/broadcast",a.broadcastNotification); r.get("/live-locations",a.liveLocations); r.get("/notifications",a.notifications); r.route("/notifications/:id").delete(a.deleteNotification); r.put("/notifications/:id/read",a.readNotification); r.route("/settings").get(a.settings).put(a.updateSettings); r.get("/reports",a.report); r.get("/collection-proofs",proof.proofs); r.get("/ratings",ratings.listAdmin); r.get("/fuel-efficiency",fuel.listAdmin); r.put("/collection-proofs/:id",proof.review);
+module.exports=r;

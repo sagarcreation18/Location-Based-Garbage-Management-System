@@ -1,0 +1,7 @@
+(() => {
+  window.routePage = async function () {
+    const [todayResponse, routesResponse] = await Promise.all([apiGet("/driver/route/today"), apiGet("/driver/routes")]);
+    const today = todayResponse.data, routes = routesResponse.data; bins = today.bins;
+    return `<div class="page-title"><h2>My Routes</h2><p>Your routes and bins assigned by the administrator.</p></div><section class="card mb-3"><div class="head"><div><h3>Active Route</h3><p>${esc(today.routeName)}${today.area ? " · " + esc(today.area) : ""}</p></div><button class="primary" id="startRoute"><i class="fa-solid fa-play me-1"></i>Start Route</button></div>${routeList(today.bins)}</section><section class="card"><div class="head"><div><h3>All My Routes</h3><p>Routes assigned to you.</p></div></div>${routes.length ? `<div class="row g-3">${routes.map(route => `<div class="col-md-6"><div class="border rounded p-3 h-100"><b>${esc(route.route_name)}</b><small class="d-block text-muted mt-1">${esc(route.area || "Area not specified")}</small><div class="d-flex justify-content-between mt-3"><span class="badge bg-success">${esc(route.status)}</span><span class="text-muted small"><i class="fa-solid fa-trash-can me-1"></i>${esc(route.assigned_bins)} bins</span></div></div></div>`).join("")}</div>` : '<div class="empty"><i class="fa-solid fa-route"></i><b>No route assigned yet.</b><p>Your administrator will assign bins and a route here.</p></div>'}</section>`;
+  };
+})();

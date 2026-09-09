@@ -61,7 +61,7 @@
         if (!response.ok) throw new Error(result.message || 'Unable to sign in');
         localStorage.setItem('ecotech-token', result.token);
         localStorage.setItem('ecotech-user', JSON.stringify(result.user));
-        const destinations = { admin: 'admin-dashboard/index.html', driver: 'driver-dashboard/index.html' };
+        const destinations = { admin: 'admin-dashboard/index.html', driver: 'driver-dashboard/index.html', citizen: 'citizen-dashboard/index.html' };
         const destination = destinations[String(result.user.role).toLowerCase()];
         if (!destination) throw new Error('Citizen dashboard is not configured yet.');
         showToast('success', 'Sign-in successful', `Opening your ${result.user.role} workspace...`);
@@ -74,12 +74,17 @@
     })();
   });
 
-  // Demo OTP flow
+  // Phone OTP flow backed by the existing authentication API.
   let generatedOtp = '';
-  $('#send-otp').addEventListener('click', () => {
+  $('#send-otp').addEventListener('click', async () => {
     const phone = $('#phone'); const form = $('#phone-pane');
     if (!phone.checkValidity()) { form.classList.add('was-validated'); showToast('error', 'Enter a valid phone number', 'Use a 10-digit phone number to receive a demo OTP.'); return; }
-    generatedOtp = String(Math.floor(100000 + Math.random() * 900000)); $('#demo-otp').textContent = generatedOtp; $('#otp-area').hidden = false; $('#otp-1').focus(); showToast('info', 'Demo OTP generated', 'Use the displayed OTP to verify your phone.');
+    try {
+      const response = await fetch('http://localhost:5000/api/auth/send-otp', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ phone: phone.value }) });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.message || 'Unable to send OTP');
+      generatedOtp = result.demoOTP; $('#demo-otp').textContent = generatedOtp; $('#otp-area').hidden = false; $('#otp-1').focus(); showToast('info', 'Demo OTP generated', 'Use the displayed OTP to verify your phone.');
+    } catch (error) { showToast('error', 'OTP unavailable', error.message); }
   });
   const otpInputs = $$('.otp-inputs input');
   otpInputs.forEach((input, index) => {
@@ -87,18 +92,38 @@
     input.addEventListener('keydown', event => { if (event.key === 'Backspace' && !input.value && otpInputs[index - 1]) otpInputs[index - 1].focus(); });
     input.addEventListener('paste', event => { const digits = (event.clipboardData.getData('text').match(/\d/g) || []).slice(0, 6); if (!digits.length) return; event.preventDefault(); digits.forEach((digit, i) => otpInputs[i].value = digit); otpInputs[Math.min(digits.length, 6) - 1].focus(); });
   });
-  $('#verify-otp').addEventListener('click', () => {
+  $('#verify-otp').addEventListener('click', async () => {
     const entered = otpInputs.map(input => input.value).join('');
     if (entered.length !== 6) { showToast('error', 'OTP incomplete', 'Enter all six digits to continue.'); return; }
-    if (entered === generatedOtp) {
-      if (selectedRole === 'Admin') {
-        showToast('success', 'Admin verified', 'Opening the EcoSmart Ballari admin dashboard...');
-        setTimeout(() => { window.location.href = 'admin-dashboard/index.html'; }, 700);
-      } else showToast('success', 'Phone verified', 'Your demo sign-in was successful.');
-      otpInputs.forEach(input => input.value = '');
-    } else showToast('error', 'Incorrect OTP', 'The code does not match the generated demo OTP.');
+    try {
+      const response = await fetch('http://localhost:5000/api/auth/verify-otp', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ phone: $('#phone').value, otp: entered, role: selectedRole }) });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.message || 'OTP verification failed');
+      localStorage.setItem('ecotech-token', result.token); localStorage.setItem('ecotech-user', JSON.stringify(result.user));
+      const destination = ({ admin: 'admin-dashboard/index.html', driver: 'driver-dashboard/index.html', citizen: 'citizen-dashboard/index.html' })[String(result.user.role).toLowerCase()];
+      if (!destination) throw new Error('No dashboard is available for this account.');
+      showToast('success', 'Phone verified', `Opening your ${result.user.role} workspace...`); otpInputs.forEach(input => input.value = ''); setTimeout(() => { window.location.href = destination; }, 500);
+    } catch (error) { showToast('error', 'OTP verification failed', error.message); }
   });
-  $('#google-login').addEventListener('click', () => showToast('info', 'Google sign-in', 'Google OAuth integration coming soon.'));
+  const loadGoogleIdentity = () => new Promise((resolve, reject) => {
+    if (window.google?.accounts?.id) return resolve();
+    const script = document.createElement('script'); script.src = 'https://accounts.google.com/gsi/client'; script.async = true; script.onload = resolve; script.onerror = () => reject(new Error('Google Identity Services could not load.')); document.head.append(script);
+  });
+  const finishGoogleLogin = async credential => {
+    try {
+      const response = await fetch('http://localhost:5000/api/auth/google', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ credential, role: selectedRole }) });
+      const result = await response.json(); if (!response.ok) throw new Error(result.message || 'Google sign-in failed');
+      localStorage.setItem('ecotech-token', result.token); localStorage.setItem('ecotech-user', JSON.stringify(result.user));
+      const destination = ({ admin: 'admin-dashboard/index.html', driver: 'driver-dashboard/index.html', citizen: 'citizen-dashboard/index.html' })[String(result.user.role).toLowerCase()];
+      if (!destination) throw new Error('No dashboard is available for this account.');
+      showToast('success', 'Google sign-in successful', `Opening your ${result.user.role} workspace...`); setTimeout(() => { location.href = destination; }, 500);
+    } catch (error) { showToast('error', 'Google sign-in failed', error.message); }
+  };
+  $('#google-login').addEventListener('click', async () => {
+    if (!window.GOOGLE_OAUTH_CLIENT_ID || window.GOOGLE_OAUTH_CLIENT_ID.startsWith('PASTE_')) { showToast('info', 'Google sign-in needs setup', 'Add the Google OAuth Web Client ID in oauth-config.js first.'); return; }
+    try { await loadGoogleIdentity(); window.google.accounts.id.initialize({ client_id: window.GOOGLE_OAUTH_CLIENT_ID, callback: response => finishGoogleLogin(response.credential) }); window.google.accounts.id.prompt(); }
+    catch (error) { showToast('error', 'Google sign-in unavailable', error.message); }
+  });
 
   // Button ripple
   $$('.ripple').forEach(button => button.addEventListener('click', event => { const wave = document.createElement('span'); const size = Math.max(button.clientWidth, button.clientHeight); const rect = button.getBoundingClientRect(); wave.className = 'wave'; wave.style.cssText = `width:${size}px;height:${size}px;left:${event.clientX - rect.left - size / 2}px;top:${event.clientY - rect.top - size / 2}px`; button.append(wave); wave.addEventListener('animationend', () => wave.remove()); }));

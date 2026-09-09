@@ -1,4 +1,5 @@
 const pool = require("../config/db");
+const { saveBase64Image } = require("../utils/uploadImage");
 
 async function driverForUser(userId) {
     const [drivers] = await pool.execute(
@@ -20,8 +21,8 @@ exports.dashboardStats = async (req, res) => {
         if (!driver) return res.status(404).json({ success: false, message: "Driver profile not found" });
         const [stats] = await pool.execute(
             `SELECT COUNT(*) AS assigned,
-                    SUM(status = 'Completed') AS completed,
-                    SUM(status IN ('Pending', 'In Progress')) AS pending,
+                    SUM(gb.status = 'Completed') AS completed,
+                    SUM(gb.status IN ('Pending', 'In Progress')) AS pending,
                     COALESCE(SUM(CASE WHEN ch.collected_at >= CURDATE() THEN ch.waste_collected ELSE 0 END), 0) AS waste_collected
              FROM garbage_bins gb
              LEFT JOIN collection_history ch ON ch.bin_id = gb.id AND ch.driver_id = ?
@@ -102,10 +103,61 @@ exports.updateLocation = async (req, res) => {
     } catch (error) { apiError(res, error, "Unable to store location"); }
 };
 
-exports.reportProblem = async (req, res) => { try { const driver = await driverForUser(req.user.id); const { problemType, description, location } = req.body; if (!problemType || !description || !location) return res.status(400).json({ success: false, message: "Problem type, description and location are required" }); await pool.execute(`INSERT INTO complaints (driver_id, category, description, location, status) VALUES (?, ?, ?, ?, 'Open')`, [driver.id, String(problemType).slice(0,60), String(description).slice(0,1000), String(location).slice(0,180)]); res.status(201).json({ success: true, message: "Problem reported successfully" }); } catch (error) { apiError(res, error, "Unable to report problem"); } };
+exports.reportProblem = async (req, res) => { try { const driver = await driverForUser(req.user.id); const { problemType, description, location, image } = req.body; if (!problemType || !description || !location) return res.status(400).json({ success: false, message: "Problem type, description and location are required" }); const imagePath = await saveBase64Image(image); await pool.execute(`INSERT INTO complaints (driver_id, category, description, location, image_path, status) VALUES (?, ?, ?, ?, ?, 'Open')`, [driver.id, String(problemType).slice(0,60), String(description).slice(0,1000), String(location).slice(0,180), imagePath]); res.status(201).json({ success: true, message: "Problem reported successfully" }); } catch (error) { if (error.message.includes("image")) return res.status(400).json({ success: false, message: error.message }); apiError(res, error, "Unable to report problem"); } };
 exports.collectionHistory = async (req, res) => { try { const driver = await driverForUser(req.user.id); const [rows] = await pool.execute(`SELECT ch.id, DATE_FORMAT(ch.collected_at, '%d %b %Y') AS date, gb.bin_code, gb.location, DATE_FORMAT(ch.collected_at, '%h:%i %p') AS collection_time, ch.waste_collected, ch.status, ch.skip_reason FROM collection_history ch JOIN garbage_bins gb ON gb.id = ch.bin_id WHERE ch.driver_id = ? ORDER BY ch.collected_at DESC LIMIT 100`, [driver.id]); res.json({ success: true, data: rows }); } catch (error) { apiError(res, error, "Unable to load collection history"); } };
 exports.notifications = async (req, res) => { try { const [rows] = await pool.execute(`SELECT id, message, type, is_read, created_at FROM notifications WHERE user_id = ? ORDER BY created_at DESC LIMIT 50`, [req.user.id]); res.json({ success: true, data: rows }); } catch (error) { apiError(res, error, "Unable to load notifications"); } };
 exports.readNotification = async (req, res) => { try { const [result] = await pool.execute(`UPDATE notifications SET is_read = TRUE WHERE id = ? AND user_id = ?`, [req.params.id, req.user.id]); if (!result.affectedRows) return res.status(404).json({ success: false, message: "Notification not found" }); res.json({ success: true, message: "Notification marked as read" }); } catch (error) { apiError(res, error); } };
 exports.profile = async (req, res) => { try { const driver = await driverForUser(req.user.id); if (!driver) return res.status(404).json({ success: false, message: "Driver profile not found" }); delete driver.user_id; res.json({ success: true, data: driver }); } catch (error) { apiError(res, error, "Unable to load profile"); } };
 exports.updateProfile = async (req, res) => { try { const { full_name, phone } = req.body; if (!full_name || !/^[0-9]{10}$/.test(String(phone || ""))) return res.status(400).json({ success: false, message: "Valid name and 10-digit phone are required" }); await pool.execute(`UPDATE users SET full_name = ?, phone = ? WHERE id = ?`, [String(full_name).slice(0,100), phone, req.user.id]); res.json({ success: true, message: "Profile updated successfully" }); } catch (error) { apiError(res, error, "Unable to update profile"); } };
 exports.updateStatus = async (req, res) => { try { const allowed = ['Available','On Route','On Break','Completed','Offline']; if (!allowed.includes(req.body.status)) return res.status(400).json({ success: false, message: "Invalid driver status" }); const [result] = await pool.execute(`UPDATE drivers SET driver_status = ? WHERE user_id = ?`, [req.body.status, req.user.id]); if (!result.affectedRows) return res.status(404).json({ success: false, message: "Driver profile not found" }); res.json({ success: true, message: "Driver status updated", data: { status: req.body.status } }); } catch (error) { apiError(res, error, "Unable to update driver status"); } };
+
+
+async function activeRouteForDriver(driverId) {
+  const [routes] = await pool.execute(`SELECT r.id, r.route_name, r.area, r.status, r.created_at, COUNT(rb.bin_id) AS assigned_bins
+    FROM routes r LEFT JOIN route_bins rb ON rb.route_id = r.id
+    WHERE r.driver_id = ? AND r.status = 'Active'
+    GROUP BY r.id ORDER BY r.created_at DESC LIMIT 1`, [driverId]);
+  return routes[0];
+}
+
+async function binsForActiveRoute(driverId) {
+  const route = await activeRouteForDriver(driverId);
+  if (route) {
+    const [bins] = await pool.execute(`SELECT gb.id, gb.bin_code, gb.location, gb.latitude, gb.longitude, gb.capacity, gb.current_level, gb.status, gb.priority, gb.last_collection
+      FROM route_bins rb JOIN garbage_bins gb ON gb.id = rb.bin_id
+      WHERE rb.route_id = ? ORDER BY rb.route_order, gb.id`, [route.id]);
+    return { route, bins };
+  }
+  const [bins] = await pool.execute(`SELECT id, bin_code, location, latitude, longitude, capacity, current_level, status, priority, last_collection
+    FROM garbage_bins WHERE assigned_driver_id = ? ORDER BY route_order, id`, [driverId]);
+  return { route: null, bins };
+}
+
+exports.todayRoute = async (req, res) => {
+  try {
+    const driver = await driverForUser(req.user.id);
+    if (!driver) return res.status(404).json({ success: false, message: "Driver profile not found" });
+    const result = await binsForActiveRoute(driver.id);
+    res.json({ success: true, data: { routeId: result.route ? result.route.id : null, routeName: result.route ? result.route.route_name : (driver.assigned_area ? driver.assigned_area + " Collection Route" : "Today's Collection Route"), area: result.route ? result.route.area : driver.assigned_area, bins: result.bins } });
+  } catch (error) { apiError(res, error, "Unable to load today's route"); }
+};
+
+exports.assignedBins = async (req, res) => {
+  try {
+    const driver = await driverForUser(req.user.id);
+    if (!driver) return res.status(404).json({ success: false, message: "Driver profile not found" });
+    const result = await binsForActiveRoute(driver.id);
+    res.json({ success: true, data: result.bins });
+  } catch (error) { apiError(res, error, "Unable to load assigned bins"); }
+};
+
+exports.myRoutes = async (req, res) => {
+  try {
+    const driver = await driverForUser(req.user.id);
+    if (!driver) return res.status(404).json({ success: false, message: "Driver profile not found" });
+    const [routes] = await pool.execute(`SELECT r.id, r.route_name, r.area, r.status, r.created_at, COUNT(rb.bin_id) AS assigned_bins
+      FROM routes r LEFT JOIN route_bins rb ON rb.route_id = r.id
+      WHERE r.driver_id = ? GROUP BY r.id ORDER BY r.created_at DESC`, [driver.id]);
+    res.json({ success: true, data: routes });
+  } catch (error) { apiError(res, error, "Unable to load assigned routes"); }
+};
