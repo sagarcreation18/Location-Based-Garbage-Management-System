@@ -1,8 +1,13 @@
 (() => {
   "use strict";
-  const API = (location.hostname === "localhost" || location.hostname === "127.0.0.1") && location.port === "5500"
-    ? "http://localhost:5000/api"
-    : `${location.origin}/api`;
+  function apiBase() {
+    const { protocol, hostname, port, origin } = location;
+    if (port === "5000") return `${origin}/api`;
+    if (hostname === "localhost" || hostname === "127.0.0.1") return "http://localhost:5000/api";
+    if (/^(192\.168\.|10\.|172\.(1[6-9]|2\d|3[0-1])\.)/.test(hostname)) return `${protocol}//${hostname}:5000/api`;
+    return `${origin}/api`;
+  }
+  const API = apiBase();
   let currentRequestId = null;
   let selectedRating = 0;
 
