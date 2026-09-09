@@ -1,6 +1,8 @@
 (() => {
   "use strict";
-  const API = "http://localhost:5000/api";
+  const API = (location.hostname === "localhost" || location.hostname === "127.0.0.1") && location.port === "5500"
+    ? "http://localhost:5000/api"
+    : `${location.origin}/api`;
   let currentRequestId = null;
   let selectedRating = 0;
 

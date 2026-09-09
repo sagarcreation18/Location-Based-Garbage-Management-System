@@ -1,6 +1,8 @@
 (() => {
   "use strict";
-  const API = "http://localhost:5000/api";
+  const API = (location.hostname === "localhost" || location.hostname === "127.0.0.1") && location.port === "5500"
+    ? "http://localhost:5000/api"
+    : `${location.origin}/api`;
 
   function esc(value) {
     const box = document.createElement("div");
@@ -20,7 +22,10 @@
     return [1, 2, 3, 4, 5].map(star => `<i class="${star <= Number(value) ? "fa-solid" : "fa-regular"} fa-star"></i>`).join("");
   }
 
-  window.renderServiceRatings = () => `<div class="page-intro"><h2>Service Ratings</h2><p>Citizen feedback received after completed collections.</p></div><section class="card" id="serviceRatingsCard"><div class="empty"><i class="fa-solid fa-spinner fa-spin"></i> Loading citizen feedback...</div></section>`;
+  window.renderServiceRatings = () => {
+    setTimeout(populateRatings, 0);
+    return `<div class="page-intro"><h2>Service Ratings</h2><p>Citizen feedback received after completed collections.</p></div><section class="card" id="serviceRatingsCard"><div class="empty"><i class="fa-solid fa-spinner fa-spin"></i> Loading citizen feedback...</div></section>`;
+  };
 
   async function populateRatings() {
     const card = document.getElementById("serviceRatingsCard");
