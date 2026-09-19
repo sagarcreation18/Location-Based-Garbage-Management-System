@@ -35,8 +35,7 @@ app.use(express.urlencoded({
 // Browser configuration is generated from Railway variables in production so
 // deployable keys are never stored in the repository. Google Maps browser keys
 // remain visible to browsers by design and must be restricted by HTTP referrer.
-if (process.env.NODE_ENV === "production") {
-    app.get("/app/maps-config.js", (req, res) => {
+app.get("/app/maps-config.js", (req, res) => {
         const key = JSON.stringify(process.env.GOOGLE_MAPS_API_KEY || "");
         res.type("application/javascript").set("Cache-Control", "no-store").send(`window.GOOGLE_MAPS_API_KEY = ${key};
 window.loadGoogleMaps = function loadGoogleMaps() {
@@ -53,11 +52,10 @@ window.loadGoogleMaps = function loadGoogleMaps() {
   });
   return window.__googleMapsPromise;
 };`);
-    });
-    app.get("/app/oauth-config.js", (req, res) => {
+});
+app.get("/app/oauth-config.js", (req, res) => {
         res.type("application/javascript").set("Cache-Control", "no-store").send(`window.GOOGLE_OAUTH_CLIENT_ID = ${JSON.stringify(process.env.GOOGLE_OAUTH_CLIENT_ID || "")};`);
-    });
-}
+});
 
 app.use("/uploads", express.static(path.join(__dirname, "uploads"), { maxAge: "1d", fallthrough: false }));
 app.use("/app", express.static(path.join(__dirname, ".."), { index: "index.html", fallthrough: false }));

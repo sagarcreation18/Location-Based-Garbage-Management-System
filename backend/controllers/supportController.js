@@ -24,7 +24,7 @@ exports.askAssistant = async (req, res) => {
   try {
     const message = String(req.body.message || "").trim(); if (!message || message.length > 1000) return res.status(400).json({ success: false, message: "Ask a question of up to 1,000 characters" });
     if (!process.env.GEMINI_API_KEY) return res.json({ success: true, data: { reply: "I can help with collection requests, complaints, bin locations, login, and dashboard access. For account-specific help, please create a support ticket or use WhatsApp." }, configured: false });
-    const model = process.env.GEMINI_MODEL || "gemini-2.0-flash";
+    const model = process.env.GEMINI_MODEL || "gemini-3.6-flash";
     const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(process.env.GEMINI_API_KEY)}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ systemInstruction: { parts: [{ text: "You are EcoSmart Ballari customer support. Answer briefly, politely, and only about waste collection, complaints, account login, maps, or dashboard features. Do not request passwords, OTPs, tokens, or personal sensitive data. If the request needs human review, advise the user to create a support ticket." }] }, contents: [{ role: "user", parts: [{ text: message }] }] }) });
     const data = await response.json(); if (!response.ok) throw new Error(data.error?.message || "Gemini request failed");
     const reply = data.candidates?.[0]?.content?.parts?.map(part => part.text || "").join("").trim();
