@@ -2,7 +2,6 @@
 backend/.env
 backend/.env.*
 !backend/.env.example
-maps-config.js
 
 # Runtime files
 backend/node_modules/
