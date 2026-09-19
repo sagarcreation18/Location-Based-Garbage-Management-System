@@ -33,6 +33,28 @@
 
 (() => {
   "use strict";
+  const makeIcon = (maps, kind, color) => {
+    const artwork = kind === "driver"
+      ? '<path fill="#fff" d="M12 20h18v15H12V20zm18 5h5l4 5v5H30v-10zM18 39a4 4 0 1 1 0-8 4 4 0 0 1 0 8zm16 0a4 4 0 1 1 0-8 4 4 0 0 1 0 8zM15 23h12v6H15z"/>'
+      : '<path fill="#fff" d="M17 19h14l-1 20H18l-1-20zm-2-4h18v3H15v-3zm6-3h6v3h-6v-3zm1 11h2v12h-2V23zm5 0h2v12h-2V23z"/>';
+    const svg = '<svg xmlns="http://www.w3.org/2000/svg" width="48" height="60" viewBox="0 0 48 60"><path d="M24 2C12 2 5 11 5 23c0 15 19 34 19 34s19-19 19-34C43 11 36 2 24 2z" fill="' + color + '" stroke="#fff" stroke-width="3"/><circle cx="24" cy="25" r="15" fill="#000" opacity=".12"/>' + artwork + '</svg>';
+    return { url: "data:image/svg+xml;charset=UTF-8," + encodeURIComponent(svg), scaledSize: new maps.Size(44, 55), anchor: new maps.Point(22, 53) };
+  };
+  window.EcoSmartMapIcons = {
+    bin: (maps, color = "#18a779") => makeIcon(maps, "bin", color),
+    driver: (maps, color = "#287ce5") => makeIcon(maps, "driver", color)
+  };
+  if (typeof window.binPin === "function") window.binPin = color => window.EcoSmartMapIcons.bin(window.google.maps, color);
+  if (typeof window.mapPin === "function") window.mapPin = color => {
+    const normalized = String(color || "").toLowerCase();
+    return normalized === "#287ce5" || normalized === "#277de5"
+      ? window.EcoSmartMapIcons.driver(window.google.maps, color)
+      : window.EcoSmartMapIcons.bin(window.google.maps, color);
+  };
+})();
+
+(() => {
+  "use strict";
   const pageRoot = document.querySelector("#pageContent");
   if (!pageRoot) return;
 

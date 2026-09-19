@@ -17,10 +17,10 @@
   };
   const markerIcon = (maps, kind, color) => {
     const artwork = kind === "driver"
-      ? '<path fill="#fff" d="M3 8h13v9H3V8zm13 4h5l3 3v2h-8v-5zM7 21a3 3 0 1 1 0-6 3 3 0 0 1 0 6zm13 0a3 3 0 1 1 0-6 3 3 0 0 1 0 6z"/>'
-      : '<path fill="#fff" d="M9 5h10l1 3H8l1-3zm1 4h8l-1 12H11L10 9zm-2 0h12v2H8V9zm4-6h4v2h-4V3zm0 20a2 2 0 0 1-2-2h2v2zm6 0v-2h2a2 2 0 0 1-2 2z"/>';
-    const svg = '<svg xmlns="http://www.w3.org/2000/svg" width="42" height="42" viewBox="0 0 28 28"><circle cx="14" cy="14" r="13" fill="' + color + '" stroke="#fff" stroke-width="2"/>' + artwork + '</svg>';
-    return { url: "data:image/svg+xml;charset=UTF-8," + encodeURIComponent(svg), scaledSize: new maps.Size(42, 42), anchor: new maps.Point(21, 21) };
+      ? '<path fill="#fff" d="M12 20h18v15H12V20zm18 5h5l4 5v5H30v-10zM18 39a4 4 0 1 1 0-8 4 4 0 0 1 0 8zm16 0a4 4 0 1 1 0-8 4 4 0 0 1 0 8zM15 23h12v6H15z"/>'
+      : '<path fill="#fff" d="M17 19h14l-1 20H18l-1-20zm-2-4h18v3H15v-3zm6-3h6v3h-6v-3zm1 11h2v12h-2V23zm5 0h2v12h-2V23z"/>';
+    const svg = '<svg xmlns="http://www.w3.org/2000/svg" width="48" height="60" viewBox="0 0 48 60"><path d="M24 2C12 2 5 11 5 23c0 15 19 34 19 34s19-19 19-34C43 11 36 2 24 2z" fill="' + color + '" stroke="#fff" stroke-width="3"/><circle cx="24" cy="25" r="15" fill="#000" opacity=".12"/>' + artwork + '</svg>';
+    return { url: "data:image/svg+xml;charset=UTF-8," + encodeURIComponent(svg), scaledSize: new maps.Size(44, 55), anchor: new maps.Point(22, 53) };
   };
 
   async function drawLiveMap(id) {

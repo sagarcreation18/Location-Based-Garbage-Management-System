@@ -18,7 +18,7 @@
       previewMap = new maps.Map(element, { center, zoom: stops.length ? 14 : 13, mapTypeControl: true, fullscreenControl: true, streetViewControl: false, gestureHandling: "greedy" });
       const bounds = new maps.LatLngBounds();
       stops.forEach((stop, index) => {
-        const marker = new maps.Marker({ position: { lat: stop.lat, lng: stop.lng }, map: previewMap, label: { text: String(index + 1), color: "#fff", fontWeight: "700" }, icon: { path: maps.SymbolPath.CIRCLE, scale: 11, fillColor: "#e4a928", fillOpacity: 1, strokeColor: "#fff", strokeWeight: 3 }, title: (index + 1) + ". " + stop.bin.bin_code });
+        const marker = new maps.Marker({ position: { lat: stop.lat, lng: stop.lng }, map: previewMap, icon: window.EcoSmartMapIcons?.bin(maps, "#e4a928"), title: (index + 1) + ". " + stop.bin.bin_code });
         const info = new maps.InfoWindow({ content: "<b>Stop " + (index + 1) + ": " + esc(stop.bin.bin_code) + "</b><br>" + esc(stop.bin.location) + "<br>Fill level: " + stop.bin.current_level + "%" });
         marker.addListener("click", () => info.open({ map: previewMap, anchor: marker }));
         bounds.extend(marker.getPosition());

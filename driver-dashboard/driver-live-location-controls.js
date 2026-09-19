@@ -34,7 +34,7 @@
     await request("/driver/location", { method: "POST", body: JSON.stringify({ latitude: position.coords.latitude, longitude: position.coords.longitude }) });
     const location = { lat: position.coords.latitude, lng: position.coords.longitude };
     if (mapInstance && window.google?.maps) {
-      if (!driverMarker) driverMarker = new google.maps.Marker({ position: location, map: mapInstance, title: "Your live location", icon: { path: google.maps.SymbolPath.CIRCLE, scale: 9, fillColor: "#287ce5", fillOpacity: 1, strokeColor: "#fff", strokeWeight: 3 } });
+      if (!driverMarker) driverMarker = new google.maps.Marker({ position: location, map: mapInstance, title: "Your live location", icon: window.EcoSmartMapIcons?.driver(google.maps, "#287ce5") });
       else driverMarker.setPosition(location);
       mapInstance.setCenter(location);
     }
@@ -73,7 +73,7 @@
       const center = routeStops[0] ? { lat: Number(routeStops[0].latitude), lng: Number(routeStops[0].longitude) } : { lat: 15.145, lng: 76.921 };
       element.innerHTML = ""; mapInstance = new maps.Map(element, { center, zoom: routeStops.length ? 14 : 13, mapTypeControl: true, streetViewControl: false, fullscreenControl: true, gestureHandling: "greedy" });
       routeStops.forEach((bin, index) => {
-        const marker = new maps.Marker({ position: { lat: Number(bin.latitude), lng: Number(bin.longitude) }, map: mapInstance, label: { text: String(index + 1), color: "#fff", fontWeight: "700" }, icon: { path: maps.SymbolPath.CIRCLE, scale: 11, fillColor: "#e4a928", fillOpacity: 1, strokeColor: "#fff", strokeWeight: 3 }, title: "Stop " + (index + 1) + ": " + bin.bin_code });
+        const marker = new maps.Marker({ position: { lat: Number(bin.latitude), lng: Number(bin.longitude) }, map: mapInstance, icon: window.EcoSmartMapIcons?.bin(maps, "#e4a928"), title: "Stop " + (index + 1) + ": " + bin.bin_code });
         const info = new maps.InfoWindow({ content: "<b>Stop " + (index + 1) + ": " + safe(bin.bin_code) + "</b><br>" + safe(bin.location) + "<br>Fill level: " + bin.current_level + "%" });
         marker.addListener("click", () => info.open({ map: mapInstance, anchor: marker }));
       });
