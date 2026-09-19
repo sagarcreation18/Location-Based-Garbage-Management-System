@@ -1,5 +1,9 @@
 (() => {
-  const API = "http://localhost:5000/api";
+  // Use the same host for the Node-served app (including Railway), while
+  // retaining port 5000 for VS Code Live Server and phones on the local LAN.
+  const API = location.pathname.startsWith("/app/")
+    ? location.origin + "/api"
+    : location.protocol + "//" + location.hostname + ":5000/api";
   const mapsByElement = {};
   const timers = {};
   const escapeHtml = value => String(value ?? "").replace(/[&<>"']/g, char => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[char]));

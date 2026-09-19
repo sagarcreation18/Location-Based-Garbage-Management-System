@@ -6,7 +6,10 @@
  */
 (() => {
   "use strict";
-  const backendOrigin = location.port === "5000"
+  // The Node app serves all pages below /app both locally and on Railway.
+  // Live Server pages use port 5500 and obtain their configuration from the
+  // local Node backend on port 5000 instead.
+  const backendOrigin = location.pathname.startsWith("/app/")
     ? location.origin
     : `${location.protocol}//${location.hostname}:5000`;
 
