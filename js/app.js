@@ -113,26 +113,6 @@
       showToast('success', 'Phone verified', `Opening your ${result.user.role} workspace...`); otpInputs.forEach(input => input.value = ''); setTimeout(() => { window.location.href = destination; }, 500);
     } catch (error) { showToast('error', 'OTP verification failed', error.message); }
   });
-  const loadGoogleIdentity = () => new Promise((resolve, reject) => {
-    if (window.google?.accounts?.id) return resolve();
-    const script = document.createElement('script'); script.src = 'https://accounts.google.com/gsi/client'; script.async = true; script.onload = resolve; script.onerror = () => reject(new Error('Google Identity Services could not load.')); document.head.append(script);
-  });
-  const finishGoogleLogin = async credential => {
-    try {
-      const response = await fetch(API + '/auth/google', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ credential, role: selectedRole }) });
-      const result = await response.json(); if (!response.ok) throw new Error(result.message || 'Google sign-in failed');
-      localStorage.setItem('ecotech-token', result.token); localStorage.setItem('ecotech-user', JSON.stringify(result.user));
-      const destination = ({ admin: 'admin-dashboard/index.html', driver: 'driver-dashboard/index.html', citizen: 'citizen-dashboard/index.html' })[String(result.user.role).toLowerCase()];
-      if (!destination) throw new Error('No dashboard is available for this account.');
-      showToast('success', 'Google sign-in successful', `Opening your ${result.user.role} workspace...`); setTimeout(() => { location.href = destination; }, 500);
-    } catch (error) { showToast('error', 'Google sign-in failed', error.message); }
-  };
-  $('#google-login').addEventListener('click', async () => {
-    if (!window.GOOGLE_OAUTH_CLIENT_ID || window.GOOGLE_OAUTH_CLIENT_ID.startsWith('PASTE_')) { showToast('info', 'Google sign-in needs setup', 'Add the Google OAuth Web Client ID in oauth-config.js first.'); return; }
-    try { await loadGoogleIdentity(); window.google.accounts.id.initialize({ client_id: window.GOOGLE_OAUTH_CLIENT_ID, callback: response => finishGoogleLogin(response.credential) }); window.google.accounts.id.prompt(); }
-    catch (error) { showToast('error', 'Google sign-in unavailable', error.message); }
-  });
-
   // Button ripple
   $$('.ripple').forEach(button => button.addEventListener('click', event => { const wave = document.createElement('span'); const size = Math.max(button.clientWidth, button.clientHeight); const rect = button.getBoundingClientRect(); wave.className = 'wave'; wave.style.cssText = `width:${size}px;height:${size}px;left:${event.clientX - rect.left - size / 2}px;top:${event.clientY - rect.top - size / 2}px`; button.append(wave); wave.addEventListener('animationend', () => wave.remove()); }));
   document.addEventListener('keydown', event => { if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'k') { event.preventDefault(); $('#email').focus(); } });
