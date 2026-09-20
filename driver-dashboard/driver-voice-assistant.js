@@ -1,7 +1,7 @@
 (() => {
   "use strict";
   const Recognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-  const API = "http://localhost:5000/api";
+  const API = window.EcoSmartApiBase;
   let recognition = null, listening = false, panelOpen = false;
 
   const esc = value => String(value ?? "").replace(/[&<>"']/g, char => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[char]));

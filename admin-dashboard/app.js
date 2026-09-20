@@ -22,7 +22,7 @@ async function exportAdminReport(button){
   if(!token){toast('Your session has expired. Please sign in again.','warning');location.href='../index.html';return}
   button.disabled=true;
   try{
-    const response=await fetch('http://localhost:5000/api/admin/reports?from='+encodeURIComponent(from)+'&to='+encodeURIComponent(to),{headers:{Authorization:'Bearer '+token}});
+    const response=await fetch(window.EcoSmartApiBase+'/admin/reports?from='+encodeURIComponent(from)+'&to='+encodeURIComponent(to),{headers:{Authorization:'Bearer '+token}});
     const result=await response.json();
     if(!response.ok)throw new Error(result.message||'Unable to generate report');
     const report=result.data;

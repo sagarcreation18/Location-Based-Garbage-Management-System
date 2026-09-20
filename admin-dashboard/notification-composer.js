@@ -1,5 +1,5 @@
 (() => {
-  const API = "http://localhost:5000/api";
+  const API = window.EcoSmartApiBase;
   const esc = value => String(value ?? "").replace(/[&<>"']/g, char => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[char]));
   async function request(path, options = {}) {
     const response = await fetch(API + path, { ...options, headers: { "Content-Type": "application/json", Authorization: "Bearer " + localStorage.getItem("ecotech-token"), ...(options.headers || {}) } });

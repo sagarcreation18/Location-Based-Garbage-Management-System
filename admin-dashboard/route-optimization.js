@@ -1,6 +1,6 @@
 (() => {
   "use strict";
-  const API = "http://localhost:5000/api";
+  const API = window.EcoSmartApiBase;
   const state = { preview: null, previewKey: "" };
 
   const esc = value => String(value ?? "").replace(/[&<>"']/g, char => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[char]));

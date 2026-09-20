@@ -2,13 +2,13 @@
 (() => {
   const token = localStorage.getItem("ecotech-token");
   const api = async path => {
-    const response = await fetch(`http://localhost:5000/api${path}`, { headers: { Authorization: `Bearer ${token}` } });
+    const response = await fetch(`${window.EcoSmartApiBase}${path}`, { headers: { Authorization: `Bearer ${token}` } });
     const data = await response.json().catch(() => ({}));
     if (response.status === 401 || response.status === 403) { localStorage.removeItem("ecotech-token"); localStorage.removeItem("ecotech-user"); location.href = "../index.html"; throw new Error("Admin session required"); }
     if (!response.ok) throw new Error(data.message || "Unable to load live admin data");
     return data;
   };
-  window.adminApi = { get: api, put: (path, body) => fetch(`http://localhost:5000/api${path}`, { method: "PUT", headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` }, body: JSON.stringify(body) }).then(response => response.json()) };
+  window.adminApi = { get: api, put: (path, body) => fetch(`${window.EcoSmartApiBase}${path}`, { method: "PUT", headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` }, body: JSON.stringify(body) }).then(response => response.json()) };
   async function hydrateDashboard() {
     try {
       const me = await api("/auth/me");

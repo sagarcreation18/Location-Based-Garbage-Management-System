@@ -1,5 +1,5 @@
 (() => {
-  const endpoint = "http://localhost:5000/api";
+  const endpoint = window.EcoSmartApiBase;
   const notice = (message, type = "success") => typeof window.toast === "function" ? window.toast(message, type) : window.alert(message);
   const request = async (path, method = "GET", body) => {
     const token = localStorage.getItem("ecotech-token");

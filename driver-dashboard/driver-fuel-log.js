@@ -1,6 +1,6 @@
 (() => {
   "use strict";
-  const API = "http://localhost:5000/api";
+  const API = window.EcoSmartApiBase;
   const esc = value => String(value ?? "").replace(/[&<>"']/g, char => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[char]));
   const notify = (message, type = "success") => typeof window.toast === "function" ? window.toast(message, type) : alert(message);
   async function api(path, options = {}) {

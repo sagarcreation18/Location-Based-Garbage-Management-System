@@ -1,5 +1,5 @@
 (() => {
-  const API = "http://localhost:5000/api";
+  const API = window.EcoSmartApiBase;
   const state = { bins: [], drivers: [], selected: new Set(), markers: new Map(), maps: null };
   const esc = value => String(value ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
   const notify = (message, type = "success") => typeof window.toast === "function" ? window.toast(message, type) : alert(message);

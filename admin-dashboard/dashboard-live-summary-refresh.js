@@ -1,6 +1,6 @@
 (() => {
   "use strict";
-  const API = location.port === "5000" ? location.origin + "/api" : location.protocol + "//" + location.hostname + ":5000/api";
+  const API = window.EcoSmartApiBase;
   const esc = value => String(value ?? "").replace(/[&<>"']/g, char => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[char]));
   const cls = value => ({ Available: "green", Active: "green", Completed: "green", Pending: "yellow", Assigned: "blue", "In Progress": "purple", "On Route": "purple", Cancelled: "red" })[value] || "blue";
   const badge = value => `<span class="badge-status ${cls(value)}">${esc(value || "Unknown")}</span>`;

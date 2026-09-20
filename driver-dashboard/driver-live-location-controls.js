@@ -1,6 +1,6 @@
 (() => {
   "use strict";
-  const API = "http://localhost:5000/api";
+  const API = window.EcoSmartApiBase;
   let watchId = null, lastSentAt = 0, mapInstance = null, driverMarker = null;
 
   const notify = (message, type = "success") => typeof window.toast === "function" ? window.toast(message, type) : alert(message);

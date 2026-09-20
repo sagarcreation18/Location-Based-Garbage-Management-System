@@ -2,7 +2,7 @@
   const token = localStorage.getItem("ecotech-token");
   const escapeHtml = value => String(value ?? "").replace(/[&<>"']/g, char => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[char]));
   const request = async (path, method = "GET", body) => {
-    const response = await fetch("http://localhost:5000/api" + path, { method, headers: { "Content-Type": "application/json", Authorization: "Bearer " + token }, body: body ? JSON.stringify(body) : undefined });
+    const response = await fetch(window.EcoSmartApiBase + path, { method, headers: { "Content-Type": "application/json", Authorization: "Bearer " + token }, body: body ? JSON.stringify(body) : undefined });
     const data = await response.json().catch(() => ({}));
     if (!response.ok) throw new Error(data.message || "Unable to load collection proofs");
     return data;

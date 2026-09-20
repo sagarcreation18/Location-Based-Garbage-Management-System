@@ -6,6 +6,13 @@
  */
 (() => {
   "use strict";
+  const apiLocation = (() => {
+    const { protocol, hostname, port, origin } = location;
+    if (port === "5000") return origin;
+    if (hostname === "localhost" || hostname === "127.0.0.1" || /^(192\.168\.|10\.|172\.(1[6-9]|2\d|3[0-1])\.)/.test(hostname)) return `${protocol}//${hostname}:5000`;
+    return origin;
+  })();
+  window.EcoSmartApiBase = `${apiLocation}/api`;
   // The Node app serves all pages below /app both locally and on Railway.
   // Live Server pages use port 5500 and obtain their configuration from the
   // local Node backend on port 5000 instead.

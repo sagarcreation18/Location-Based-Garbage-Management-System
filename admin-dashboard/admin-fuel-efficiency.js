@@ -1,6 +1,6 @@
 (() => {
   "use strict";
-  const API = "http://localhost:5000/api";
+  const API = window.EcoSmartApiBase;
   const esc = value => String(value ?? "").replace(/[&<>"']/g, char => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[char]));
   async function api() {
     const response = await fetch(API + "/admin/fuel-efficiency", { headers: { Authorization: "Bearer " + (localStorage.getItem("ecotech-token") || "") } });

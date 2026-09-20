@@ -38,6 +38,7 @@ app.use(express.urlencoded({
 app.get("/app/maps-config.js", (req, res) => {
         const key = JSON.stringify(process.env.GOOGLE_MAPS_API_KEY || "");
         res.type("application/javascript").set("Cache-Control", "no-store").send(`window.GOOGLE_MAPS_API_KEY = ${key};
+window.EcoSmartApiBase = window.location.origin + "/api";
 window.loadGoogleMaps = function loadGoogleMaps() {
   if (window.google && window.google.maps) return Promise.resolve(window.google.maps);
   if (window.__googleMapsPromise) return window.__googleMapsPromise;

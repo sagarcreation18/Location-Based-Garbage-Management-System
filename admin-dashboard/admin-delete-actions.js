@@ -1,5 +1,5 @@
 (() => {
-  const API = "http://localhost:5000/api";
+  const API = window.EcoSmartApiBase;
   const labels = { bins: "garbage bin", drivers: "driver", citizens: "citizen", requests: "collection request", complaints: "complaint", routes: "route" };
   const token = () => localStorage.getItem("ecotech-token");
   const escapeHtml = value => String(value ?? "").replace(/[&<>"']/g, char => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[char]));
