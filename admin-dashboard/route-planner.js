@@ -43,12 +43,12 @@
         marker.addListener("click", () => { toggleBin(bin.id); info.open({ map, anchor: marker, content: `<b>${esc(bin.bin_code)}</b><br>${esc(bin.location)}<br>Click marker to ${state.selected.has(bin.id) ? "remove from" : "add to"} route` }); });
       });
       const rows = document.querySelector("#plannedRouteRows");
-      rows.innerHTML = routes.length ? routes.map(route => `<tr><td><b>${esc(route.route_name)}</b></td><td>${esc(route.area || "-")}</td><td>${esc(route.driver_name || "Unassigned")}</td><td>${esc(route.assigned_bins)}</td><td>${esc(route.status)}</td></tr>`).join("") : '<tr><td colspan="5" class="text-center text-muted py-4">No routes created yet.</td></tr>';
+      rows.innerHTML = routes.length ? routes.map(route => `<tr><td><b>${esc(route.route_name)}</b></td><td>${esc(route.area || "-")}</td><td>${esc(route.driver_name || "Unassigned")}</td><td>${esc(route.assigned_bins)}</td><td>${esc(route.status)}</td><td><button type="button" class="btn btn-outline-danger btn-sm" data-delete-route="${route.id}" data-route-name="${esc(route.route_name)}"><i class="fa-solid fa-trash"></i><span class="ms-1">Delete</span></button></td></tr>`).join("") : '<tr><td colspan="6" class="text-center text-muted py-4">No routes created yet.</td></tr>';
     } catch (error) { const map = document.querySelector("#routePlannerMap"); if (map) map.innerHTML = `<div class="p-3 text-danger">${esc(error.message)}</div>`; notify(error.message, "error"); }
   }
   window.renderRoutes = () => {
     setTimeout(initialize, 0);
-    return '<div class="page-intro"><h2>Route Planner</h2><p>Select bins on Google Maps, assign a driver, and publish the route directly to their dashboard.</p></div><section class="card-panel mb-4"><form id="routePlannerForm"><div class="row g-3"><div class="col-md-4"><label class="form-label">Route name *</label><input class="form-control" id="plannerRouteName" required placeholder="Ward 4 Morning Route"></div><div class="col-md-4"><label class="form-label">Area</label><input class="form-control" id="plannerArea" placeholder="Gandhi Nagar"></div><div class="col-md-4"><label class="form-label">Driver *</label><select class="form-select" id="plannerDriver" required><option>Loading drivers...</option></select></div><div class="col-lg-8"><div class="d-flex align-items-center justify-content-between mb-2"><b>Select bins from the map</b><span id="routeSelectedCount" class="badge text-bg-success">0 bins selected</span></div><div id="routePlannerMap" class="border rounded" style="height:420px"></div><p class="text-muted small mt-2 mb-0">Click a bin marker to add or remove it. Green markers are selected.</p></div><div class="col-lg-4"><label class="form-label">Available bins</label><div id="routeBinList" class="border rounded p-2 overflow-auto" style="height:420px"></div></div><div class="col-12 d-flex justify-content-end"><button class="primary-action" type="submit"><i class="fa-solid fa-route me-1"></i>Create and Assign Route</button></div></div></form></section><section class="card-panel"><div class="card-head"><div><h3>Created Routes</h3><p>Routes already assigned to drivers.</p></div></div><div class="table-responsive"><table class="data-table"><thead><tr><th>Route</th><th>Area</th><th>Driver</th><th>Bins</th><th>Status</th></tr></thead><tbody id="plannedRouteRows"><tr><td colspan="5" class="text-muted">Loading routes...</td></tr></tbody></table></div></section>';
+    return '<div class="page-intro"><h2>Route Planner</h2><p>Select bins on Google Maps, assign a driver, and publish the route directly to their dashboard.</p></div><section class="card-panel mb-4"><form id="routePlannerForm"><div class="row g-3"><div class="col-md-4"><label class="form-label">Route name *</label><input class="form-control" id="plannerRouteName" required placeholder="Ward 4 Morning Route"></div><div class="col-md-4"><label class="form-label">Area</label><input class="form-control" id="plannerArea" placeholder="Gandhi Nagar"></div><div class="col-md-4"><label class="form-label">Driver *</label><select class="form-select" id="plannerDriver" required><option>Loading drivers...</option></select></div><div class="col-lg-8"><div class="d-flex align-items-center justify-content-between mb-2"><b>Select bins on the map</b><span id="routeSelectedCount" class="badge text-bg-success">0 bins selected</span></div><div id="routePlannerMap" class="border rounded" style="height:420px"></div><p class="text-muted small mt-2 mb-0">Click a bin marker to add or remove it. Green markers are selected.</p></div><div class="col-lg-4"><label class="form-label">Available bins</label><div id="routeBinList" class="border rounded p-2 overflow-auto" style="height:420px"></div></div><div class="col-12 d-flex justify-content-end"><button class="primary-action" type="submit"><i class="fa-solid fa-route me-1"></i>Create and Assign Route</button></div></div></form></section><section class="card-panel"><div class="card-head"><div><h3>Created Routes</h3><p>Routes already assigned to drivers.</p></div></div><div class="table-responsive"><table class="data-table"><thead><tr><th>Route</th><th>Area</th><th>Driver</th><th>Bins</th><th>Status</th><th>Action</th></tr></thead><tbody id="plannedRouteRows"><tr><td colspan="6" class="text-muted">Loading routes...</td></tr></tbody></table></div></section>';
   };
   document.addEventListener("submit", async event => {
     if (event.target.id !== "routePlannerForm") return;
@@ -57,5 +57,20 @@
       await api("/admin/routes", { method: "POST", body: JSON.stringify({ route_name: document.querySelector("#plannerRouteName").value.trim(), area: document.querySelector("#plannerArea").value.trim(), driver_id: Number(document.querySelector("#plannerDriver").value), bin_ids: [...state.selected] }) });
       notify("Route assigned. It is now visible in the driver's My Routes page."); state.selected.clear(); window.renderPage?.("routes");
     } catch (error) { notify(error.message, "error"); } finally { submit.disabled = false; }
+  });
+  document.addEventListener("click", async event => {
+    const button = event.target.closest("[data-delete-route]");
+    if (!button) return;
+    const routeName = button.dataset.routeName || "this route";
+    if (!confirm(`Delete ${routeName}? Its selected bins will be released from the route.`)) return;
+    button.disabled = true;
+    try {
+      await api(`/admin/routes/${button.dataset.deleteRoute}`, { method: "DELETE" });
+      notify("Route deleted. Its bins are now available for a new route.");
+      window.renderPage?.("routes");
+    } catch (error) {
+      button.disabled = false;
+      notify(error.message, "error");
+    }
   });
 })();
