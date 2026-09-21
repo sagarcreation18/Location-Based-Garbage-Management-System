@@ -7,13 +7,13 @@
     if (/^(192\.168\.|10\.|172\.(1[6-9]|2\d|3[0-1])\.)/.test(hostname)) return `${protocol}//${hostname}:5000/api`;
     return `${origin}/api`;
   }
-  const API = apiBase();
+  const API = window.EcoSmartApiBase || apiBase();
   let currentRequestId = null;
   let selectedRating = 0;
 
   const authHeaders = () => ({
     "Content-Type": "application/json",
-    Authorization: "Bearer " + (localStorage.getItem("token") || "")
+    Authorization: "Bearer " + (localStorage.getItem("ecotech-token") || "")
   });
 
   function escRating(value) {

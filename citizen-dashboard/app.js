@@ -1,4 +1,6 @@
-const API = "http://localhost:5000/api";
+// maps-config.js supplies the right backend for Railway, Live Server, and LAN use.
+// Keep a same-origin fallback for the deployed Node application.
+const API = window.EcoSmartApiBase || `${location.origin}/api`;
 const token = localStorage.getItem("ecotech-token");
 let profile, map, googleMaps, cachedBins = [];
 const $ = (selector, root = document) => root.querySelector(selector);
@@ -9,7 +11,7 @@ const imageData = file => new Promise((resolve, reject) => { if (!file) return r
 async function request(path, options = {}) {
   let response;
   try { response = await fetch(API + path, { ...options, headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}`, ...options.headers } }); }
-  catch { throw new Error("Unable to reach the server. Make sure the backend is running on port 5000."); }
+  catch { throw new Error("Unable to reach the EcoSmart server. Please check your internet connection and try again."); }
   const payload = await response.json().catch(() => ({}));
   if (response.status === 401) { localStorage.removeItem("ecotech-token"); localStorage.removeItem("ecotech-user"); location.href = "../index.html"; throw new Error("Your session has expired."); }
   if (!response.ok) throw new Error(payload.message || "Unable to complete the request.");
