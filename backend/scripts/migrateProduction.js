@@ -3,6 +3,7 @@
  * Every CREATE statement is idempotent, so Railway can run this before each deploy.
  */
 const mysql = require("mysql2/promise");
+const bcrypt = require("bcryptjs");
 require("dotenv").config();
 
 const connectionOptions = {
@@ -156,6 +157,18 @@ async function migrate() {
     await connection.query(`INSERT IGNORE INTO system_settings (setting_key, setting_value) VALUES
       ('system_name', 'EcoSmart Ballari'), ('city', 'Ballari, Karnataka'),
       ('map_default_zoom', '14'), ('notifications_enabled', 'true')`);
+    const [[adminCount]] = await connection.query("SELECT COUNT(*) AS total FROM users WHERE role='admin'");
+    if (!Number(adminCount.total)) {
+      const password = process.env.BOOTSTRAP_ADMIN_PASSWORD;
+      if (!password || password.length < 12) throw new Error("A 12-character BOOTSTRAP_ADMIN_PASSWORD is required for the first administrator.");
+      const passwordHash = await bcrypt.hash(password, 12);
+      await connection.execute(
+        `INSERT INTO users (full_name,email,phone,password_hash,role,is_verified,is_active)
+         VALUES (?, ?, ?, ?, 'admin', TRUE, TRUE)`,
+        ["EcoSmart Administrator", "admin@ecotech.com", "9999999999", passwordHash]
+      );
+      console.log("Initial EcoSmart administrator created.");
+    }
     console.log("EcoSmart production schema is ready.");
   } finally {
     await connection.end();
