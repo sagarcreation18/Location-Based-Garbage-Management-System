@@ -39,11 +39,36 @@ app.get("/app/maps-config.js", (req, res) => {
         const key = JSON.stringify(process.env.GOOGLE_MAPS_API_KEY || "");
         res.type("application/javascript").set("Cache-Control", "no-store").send(`window.GOOGLE_MAPS_API_KEY = ${key};
 window.EcoSmartApiBase = window.location.origin + "/api";
+function injectMapsScript(key, attempt) {
+  attempt = attempt || 0;
+  return new Promise(function(resolve, reject) {
+    var script = document.createElement("script");
+    script.dataset.ecosmartMaps = "true";
+    script.src = "https://maps.googleapis.com/maps/api/js?key=" + encodeURIComponent(key) + "&v=weekly";
+    script.async = true;
+    var fail = function() {
+      script.remove();
+      if (attempt === 0) {
+        setTimeout(function() { injectMapsScript(key, 1).then(resolve, reject); }, 700);
+        return;
+      }
+      reject(new Error("Google Maps could not load. Check your connection or try again shortly."));
+    };
+    script.onload = function() { return window.google && window.google.maps ? resolve(window.google.maps) : fail(); };
+    script.onerror = fail;
+    document.head.appendChild(script);
+  });
+}
 window.loadGoogleMaps = function loadGoogleMaps() {
   if (window.google && window.google.maps) return Promise.resolve(window.google.maps);
   if (window.__googleMapsPromise) return window.__googleMapsPromise;
   if (!window.GOOGLE_MAPS_API_KEY) return Promise.reject(new Error("Google Maps is not configured."));
-  window.__googleMapsPromise = new Promise((resolve, reject) => {
+  window.__googleMapsPromise = injectMapsScript(window.GOOGLE_MAPS_API_KEY);
+  return window.__googleMapsPromise.catch(function(error) {
+    window.__googleMapsPromise = null;
+    throw error;
+  });
+  /*
     const script = document.createElement("script");
     script.src = "https://maps.googleapis.com/maps/api/js?key=" + encodeURIComponent(window.GOOGLE_MAPS_API_KEY) + "&v=weekly";
     script.async = true;
@@ -51,7 +76,7 @@ window.loadGoogleMaps = function loadGoogleMaps() {
     script.onerror = () => reject(new Error("Google Maps could not load."));
     document.head.appendChild(script);
   });
-  return window.__googleMapsPromise;
+  return window.__googleMapsPromise; */
 };`);
 });
 app.get("/app/oauth-config.js", (req, res) => {

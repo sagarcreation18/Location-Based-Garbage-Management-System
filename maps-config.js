@@ -35,17 +35,33 @@
     return key;
   }
 
+  function injectMapsScript(key, attempt = 0) {
+    return new Promise((resolve, reject) => {
+      const script = document.createElement("script");
+      script.dataset.ecosmartMaps = "true";
+      script.src = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(key)}&v=weekly`;
+      script.async = true;
+      const fail = () => {
+        script.remove();
+        if (attempt === 0) {
+          setTimeout(() => injectMapsScript(key, 1).then(resolve, reject), 700);
+          return;
+        }
+        reject(new Error("Google Maps could not load. Check your connection or try again shortly."));
+      };
+      script.onload = () => window.google?.maps ? resolve(window.google.maps) : fail();
+      script.onerror = fail;
+      document.head.appendChild(script);
+    });
+  }
+
   window.loadGoogleMaps = function loadGoogleMaps() {
     if (window.google && window.google.maps) return Promise.resolve(window.google.maps);
     if (window.__googleMapsPromise) return window.__googleMapsPromise;
-    window.__googleMapsPromise = getConfiguredKey().then(key => new Promise((resolve, reject) => {
-      const script = document.createElement("script");
-      script.src = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(key)}&v=weekly`;
-      script.async = true;
-      script.onload = () => resolve(window.google.maps);
-      script.onerror = () => reject(new Error("Google Maps could not load. Check Google Cloud key restrictions and billing."));
-      document.head.appendChild(script);
-    }));
-    return window.__googleMapsPromise;
+    window.__googleMapsPromise = getConfiguredKey().then(injectMapsScript);
+    return window.__googleMapsPromise.catch(error => {
+      window.__googleMapsPromise = null;
+      throw error;
+    });
   };
 })();
