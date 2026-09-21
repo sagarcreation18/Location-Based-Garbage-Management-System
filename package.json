@@ -1,0 +1,7 @@
+{
+  "name": "ecosmart-ballari-deployment",
+  "private": true,
+  "engines": {
+    "node": ">=20"
+  }
+}
