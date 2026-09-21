@@ -158,16 +158,26 @@ async function migrate() {
       ('system_name', 'EcoSmart Ballari'), ('city', 'Ballari, Karnataka'),
       ('map_default_zoom', '14'), ('notifications_enabled', 'true')`);
     const [[adminCount]] = await connection.query("SELECT COUNT(*) AS total FROM users WHERE role='admin'");
-    if (!Number(adminCount.total)) {
-      const password = process.env.BOOTSTRAP_ADMIN_PASSWORD;
-      if (!password || password.length < 12) throw new Error("A 12-character BOOTSTRAP_ADMIN_PASSWORD is required for the first administrator.");
+    const password = process.env.BOOTSTRAP_ADMIN_PASSWORD;
+    if (!Number(adminCount.total) && (!password || password.length < 12)) {
+      throw new Error("A 12-character BOOTSTRAP_ADMIN_PASSWORD is required for the first administrator.");
+    }
+    if (password && password.length >= 12) {
       const passwordHash = await bcrypt.hash(password, 12);
+      if (!Number(adminCount.total)) {
       await connection.execute(
         `INSERT INTO users (full_name,email,phone,password_hash,role,is_verified,is_active)
          VALUES (?, ?, ?, ?, 'admin', TRUE, TRUE)`,
         ["EcoSmart Administrator", "admin@ecotech.com", "9999999999", passwordHash]
       );
       console.log("Initial EcoSmart administrator created.");
+      } else {
+        await connection.execute(
+          "UPDATE users SET password_hash=?, is_verified=TRUE, is_active=TRUE WHERE email=? AND role='admin'",
+          [passwordHash, "admin@ecotech.com"]
+        );
+        console.log("Initial EcoSmart administrator password refreshed.");
+      }
     }
     console.log("EcoSmart production schema is ready.");
   } finally {
